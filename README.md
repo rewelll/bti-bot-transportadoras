@@ -56,10 +56,6 @@ Para utilizar este projeto, é necessário ter uma instância do n8n e um banco 
 
 Os workflows podem ser importados para o n8n a partir dos arquivos JSON fornecidos. O esquema do banco de dados pode ser criado executando o script `database.sql`.
 
-## Conclusão
-
-Este projeto oferece uma solução robusta e escalável para automação de atendimento via WhatsApp. A combinação do n8n para a lógica do workflow e do PostgreSQL para o armazenamento de dados permite uma grande flexibilidade e personalização para atender a diversas necessidades de negócios.
-
 
 
 
@@ -111,11 +107,4 @@ Este workflow é crucial para a manutenção do sistema. Ele executa uma consult
 7.  O funcionário interage com os menus (listas interativas) para registrar o status de uma entrega, agendar um horário, etc.
 8.  Cada interação atualiza a tabela `wa_session` e, dependendo da ação, outras tabelas como `task_history` e `log_json`.
 9.  Ao final do fluxo, o funcionário pode cancelar ou finalizar o atendimento, ou a sessão pode ser finalizada automaticamente pelo `timer-finisher` após um período de inatividade.
-
-## Melhorias Futuras
-
-*   **Tratamento de Erros Mais Robusto**: Implementar um tratamento de erros mais detalhado no workflow para lidar com entradas inesperadas do usuário ou falhas na comunicação com a API.
-*   **Notificações Ativas**: Criar workflows que enviem notificações ativas para os funcionários (por exemplo, lembretes de agendamento).
-*   **Dashboard de Análise**: Utilizar os dados armazenados, especialmente em `log_json` e `task_history`, para criar dashboards de análise sobre o tempo de atendimento, principais ocorrências, etc.
-*   **Integração com Outros Sistemas**: Expandir o projeto para se integrar com outros sistemas de ERP ou CRM da empresa.
 
