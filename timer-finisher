@@ -1,0 +1,123 @@
+{
+  "name": "timer-finisher",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e5db38b5-28bd-4924-9353-ec9a78b6a341",
+      "name": "5 min"
+    },
+    {
+      "parameters": {
+        "url": "=https://pljiqvdifpjbinxdadmz.supabase.co/rest/v1/wa_session?active=eq.true&updated_at=lt.{{$now.minus({minutes:10}).toUTC().toFormat(\"yyyy-MM-dd'T'HH:mm:ss'Z'\")}}\n\n\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        288,
+        0
+      ],
+      "id": "34ec4429-1162-4022-bc65-ce62ceb00e3b",
+      "name": "GET sessões ativas há mais de 10 min",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://pljiqvdifpjbinxdadmz.supabase.co/rest/v1/wa_session?wa_id=eq.{{ $json.wa_id }}&active=eq.true",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \n{\n  \"active\":false,\n  \"updated_at\":$now.toUTC().toFormat(\"yyyy-MM-dd'T'HH:mm:ss'Z'\"),\n  \"state\":\"FINISHED\"\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        608,
+        0
+      ],
+      "id": "38d4baad-f397-421f-8e73-87312eb3e171",
+      "name": "UPDATE State",
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "5 min": {
+      "main": [
+        [
+          {
+            "node": "GET sessões ativas há mais de 10 min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UPDATE State": {
+      "main": [
+        []
+      ]
+    },
+    "GET sessões ativas há mais de 10 min": {
+      "main": [
+        [
+          {
+            "node": "UPDATE State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c0b01eda-305b-4a83-bfb3-4993e1497c23",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "aa6df07db1b386814570ffd65bf5a1bc78881504b712a406d3a96a243fdeef75"
+  },
+  "id": "7KEoPGF9963fqOFz",
+  "tags": []
+}
