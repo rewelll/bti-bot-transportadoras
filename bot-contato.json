@@ -1,0 +1,800 @@
+{
+  "name": "Bot-contato",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4915c86e-ff37-4095-a2fe-3ea6157e977f",
+      "name": "WhatsApp Trigger",
+      "webhookId": "08c2a405-7659-4104-a467-51ed4c67674a",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "livkpHGMvNWwqvaA",
+          "name": "App Rewell"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json.messages?.[0] || {};\nconst type = msg.type;\nconst text = (msg.text?.body || \"\").trim();\nconst interactiveId = msg.interactive?.list_reply?.id ?? null;\nconst raw = $json.messages?.[0]?.from || \"\";\nlet parsedPhoneNumber = raw.replace(/[^\\d]/g, \"\");\n\nif (parsedPhoneNumber.length === 12) {\n  parsedPhoneNumber = parsedPhoneNumber.slice(0,4) + \"9\" + parsedPhoneNumber.slice(4);\n}\nreturn [{ json: { \n  parsedPhoneNumber: `${parsedPhoneNumber}`,\n  message_id: msg.id,\n  type: interactiveId ? \"interactive\" : \"text\",\n  text: text.toUpperCase(),\n  interactive_id: interactiveId\n  } \n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "2bd1eabe-08d3-4d91-b3e8-941251892472",
+      "name": "Parser numero/mensagem"
+    },
+    {
+      "parameters": {
+        "url": "https://pljiqvdifpjbinxdadmz.supabase.co/rest/v1/wa_session",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "wa_id",
+              "value": "=eq.{{ $json.parsedPhoneNumber }}"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            },
+            {
+              "name": "order",
+              "value": "updated_at.desc"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        0
+      ],
+      "id": "c164dab8-4d84-47e6-9ab5-c47dcd39cd1e",
+      "name": "Get last session",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v22.0/764981153363033/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Parser numero/mensagem').item.json.parsedPhoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"Seu número não está registrado.\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        592
+      ],
+      "id": "d9374fbd-ab35-40fd-95da-d061737fbaab",
+      "name": "Número não está registrado",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "6DyQbUy3Ty2nyzEV",
+          "name": "Token Rewell"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2d342224-5770-481d-bd86-8bb62b2882a7",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1072,
+        240
+      ],
+      "id": "d04a4f2f-a361-4287-8353-53a3739351e4",
+      "name": "Número registrado?"
+    },
+    {
+      "parameters": {
+        "content": "## Número não existe no banco de dados, cancela a consulta\n",
+        "height": 272,
+        "width": 368,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        480
+      ],
+      "id": "bfc3fc6c-84cc-4bf8-b2f5-7e3f626a25bf",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "operation": "get",
+        "tableId": "employee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "wa_id",
+              "keyValue": "={{ $('Parser numero/mensagem').item.json.parsedPhoneNumber }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        880,
+        240
+      ],
+      "id": "c6a3b281-514f-40fb-aadb-bb3a189faf76",
+      "name": "Get employee wa_id",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c5db1e13-4141-4556-a02e-b549b9180b77",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "1eec921e-b4da-4e05-97e9-eb6966961379",
+      "name": "First Session?"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "operation": "get",
+        "tableId": "vehicle",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "employee_id",
+              "keyValue": "={{ $('Get employee wa_id').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        128
+      ],
+      "id": "a598b369-c6e9-4934-b0b0-7cd60408efef",
+      "name": "Get vehicle",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v22.0/764981153363033/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.reply }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2032,
+        -256
+      ],
+      "id": "ee4d2343-adcc-4186-93ae-7f8568ea76e7",
+      "name": "POST Whatsapp",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "6DyQbUy3Ty2nyzEV",
+          "name": "Token Rewell"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9d821757-2622-4945-b5d8-87e29193bf9d",
+              "leftValue": "={{ $('Get last session').item.json.active }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "427a8d5b-14e7-46e1-bcf3-0898f4be7a66",
+              "leftValue": "={{ $('Get last session').item.json.state }}",
+              "rightValue": "FINISHED",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        -64
+      ],
+      "id": "016ee7ab-70f8-40d1-b176-57877cef671a",
+      "name": "Atendimento em andamento?"
+    },
+    {
+      "parameters": {
+        "content": "## Inicia o menu inicial\n",
+        "height": 192,
+        "width": 480,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        80
+      ],
+      "id": "896fb4ac-87bb-4656-bc02-6657945893cd",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v22.0/764981153363033/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $('Parser numero/mensagem').item.json.parsedPhoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"Escolha o Tipo de Atendimento\"\n    },\n    \"body\": {\n      \"text\": \"Selecione uma das opções abaixo para continuar:\"\n    },\n    \"footer\": {\n      \"text\": \"Sistema de Atendimento\"\n    },\n    \"action\": {\n      \"button\": \"Selecionar\",\n      \"sections\": [\n        {\n          \"title\": \"Opções de Atendimento\",\n          \"rows\": [\n            {\n              \"id\": \"0\",\n              \"title\": \"Entrega Rota Normal\",\n              \"description\": \"Seguir com entrega padrão\"\n            },\n            {\n              \"id\": \"1\",\n              \"title\": \"Agendamento\",\n              \"description\": \"Agendar horário para entrega\"\n            },\n            {\n              \"id\": \"2\",\n              \"title\": \"Cancelar\",\n              \"description\": \"Cancelar atendimento.\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2048,
+        144
+      ],
+      "id": "cd2a3884-7926-49b6-b2e5-3e5f857788a2",
+      "name": "Start menu",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "6DyQbUy3Ty2nyzEV",
+          "name": "Token Rewell"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Sessions\n## Tabela \"wa_session\"\n### state: \n- START : Menu inicial\n- \n",
+        "width": 400,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        -400
+      ],
+      "id": "4de98e61-ccfd-4092-a01c-0b8203dd5c6a",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "tableId": "wa_session",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "wa_id",
+              "fieldValue": "={{ $('Parser numero/mensagem').item.json.parsedPhoneNumber }}"
+            },
+            {
+              "fieldId": "state",
+              "fieldValue": "=MENU_MAIN"
+            },
+            {
+              "fieldId": "employee_id",
+              "fieldValue": "={{ $('Get employee wa_id').item.json.id }}"
+            },
+            {
+              "fieldId": "context",
+              "fieldValue": "={{ \n{\n\"name\":$('Get employee wa_id').item.json.name,\n\"plate\":$json.plate\n}\n}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        128
+      ],
+      "id": "f7cb3d9c-c14a-41a6-b299-bf3e9c0be714",
+      "name": "Start first session",
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "wa_session",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "wa_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Parser numero/mensagem').item.json.parsedPhoneNumber }}"
+            },
+            {
+              "keyName": "state",
+              "condition": "eq",
+              "keyValue": "FINISHED"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "state",
+              "fieldValue": "MENU_MAIN"
+            },
+            {
+              "fieldId": "updated_at",
+              "fieldValue": "={{ DateTime.now() }}"
+            },
+            {
+              "fieldId": "retries",
+              "fieldValue": "0"
+            },
+            {
+              "fieldId": "active",
+              "fieldValue": "={{ true }}"
+            },
+            {
+              "fieldId": "last_message_id",
+              "fieldValue": "={{ null }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        -48
+      ],
+      "id": "4a582fa2-d299-410a-b380-b45f5a4b277d",
+      "name": "Start new session",
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const parser = $('Parser numero/mensagem').item.json;\nconst rawSession = $('Get last session').first().json || {};\n\nconst wa_id = parser?.parsedPhoneNumber;\nconst message_id = parser?.message_id || null;\nconst inputType = parser?.type || 'text';\nconst rawText = (parser?.text || '').toString();\nconst text = rawText.trim();\nconst interactive_id = parser?.interactive_id ?? null;\n\n// Sessão atual\nlet session = {\n  wa_id: rawSession?.wa_id ?? wa_id,\n  state: rawSession?.state ?? 'START',\n  context: rawSession?.context ?? {},\n  retries: Number.isFinite(Number(rawSession?.retries)) ? Number(rawSession.retries) : 0,\n  last_message_id: rawSession?.last_message_id ?? null,\n  employee_id: rawSession?.employee_id ?? null,\n  active: rawSession?.active ?? true\n};\n\n// Helper para timestamps\nfunction nowISO() {\n  return new Date().toISOString();\n}\n\n// Cria textos\nfunction buildText(body) {\n  return {\n    messaging_product: \"whatsapp\",\n    to: wa_id,\n    type: \"text\",\n    text: { body }\n  };\n}\n\n// Cria menus\nfunction buildList(header, body, rows) {\n  return {\n    messaging_product: \"whatsapp\",\n    recipient_type: \"individual\",\n    to: wa_id,\n    type: \"interactive\",\n    interactive: {\n      type: \"list\",\n      header: { type: \"text\", text: header },\n      body: { text: body },\n      footer: { text: \"Sistema de Atendimento\" },\n      action: { button: \"Selecionar\", sections: [{ title: \"Opções\", rows }] }\n    }\n  };\n}\n\n// State Mapping\nconst stateMap = {\n  MENU_MAIN: {\n    action: () => {\n      if (inputType === 'interactive') {\n        switch (String(interactive_id)) {\n          case '0':\n            return {\n              next: 'MENU_ENTREGA',\n              reply: buildList(\n                \"Escolha o Tipo de Entrega\",\n                \"Selecione uma das opções abaixo:\",\n                [\n                  { id: \"0\", title: \"Sucesso\", description: \"Entrega realizada\" },\n                  { id: \"1\", title: \"Pendência\", description: \"Entrega com pendência\" },\n                  { id: \"2\", title: \"Insucesso\", description: \"Entrega não realizada\" },\n                  { id: \"4\", title: \"Voltar\", description: \"Retornar ao menu principal\" }\n                ]\n              )\n            };\n          case '1':\n            return {\n              next: 'AGENDAMENTO',\n              reply: buildText(\"Por favor, envie a data desejada para o agendamento (DD/MM/AAAA).\")\n            };\n          case '2':\n            return {\n              next: 'FINISHED',\n              reply: buildText(\"Atendimento cancelado. Obrigado!\"),\n              active: false\n            };\n          default:\n            return { next: 'MENU_MAIN', reply: buildText(\"Opção inválida. Por favor, selecione do menu.\"), incRetry: true };\n        }\n      }\n      return { next: 'MENU_MAIN', reply: buildText(\"Por favor, selecione uma opção do menu.\"), incRetry: true };\n    }\n  },\n\n  MENU_ENTREGA: {\n    action: () => {\n      if (inputType === 'interactive') {\n        switch (String(interactive_id)) {\n          case '0':\n  return { next: 'FINISHED', reply: buildText(\"Entrega registrada com SUCESSO.\") };\n          case '1':\n            return { next: 'FINISHED', reply: buildText(\"Entrega registrada com PENDÊNCIA.\"), active: false };\n          case '2':\n            return { next: 'FINISHED', reply: buildText(\"Entrega registrada como INSUCESSO.\"), active: false };\n          case '4':\n            return {\n              next: 'MENU_MAIN',\n              reply: buildList(\n                \"Escolha o Tipo de Atendimento\",\n                \"Selecione uma das opções abaixo:\",\n                [\n                  { id: \"0\", title: \"Entrega Rota Normal\", description: \"Seguir com entrega padrão\" },\n                  { id: \"1\", title: \"Agendamento\", description: \"Agendar horário para entrega\" },\n                  { id: \"2\", title: \"Cancelar\", description: \"Cancelar atendimento\" }\n                ]\n              )\n            };\n          default:\n            return { next: 'MENU_ENTREGA', reply: buildText(\"Opção inválida. Selecione uma das opções.\"), incRetry: true };\n        }\n      }\n      return { next: 'MENU_ENTREGA', reply: buildText(\"Por favor, selecione uma opção da lista.\"), incRetry: true };\n    }\n  },\n  \n  FINISHED: {\n    action: () => ({\n      next: 'FINISHED',\n      reply: buildText(\"Atendimento finalizado.\"),\n      active: false\n    })\n  }\n};\n\n// Verifica se o estado existe\nconst currentState = stateMap[session.state];\nif (!currentState) {\n  return [{\n    json: {\n      reply: buildText(\"Erro interno: estado inválido.\"),\n      session_update: { ...session, updated_at: nowISO() },\n      idempotent: false\n    }\n  }];\n}\n\n// Execução\nlet result;\ntry {\n  result = currentState.action();\n} catch (e) {\n  result = { next: 'FINISHED', reply: buildText(\"Erro interno. Encerrando atendimento.\"), active: false };\n}\n\n// Atualiza sessão\nconst nextState = result.next || session.state;\nconst ctxPatch = result.ctxPatch || {};\nconst newContext = { ...session.context, ...ctxPatch };\nconst retries = result.incRetry ? session.retries + 1 : 0;\nconst active = 'active' in result ? result.active : session.active;\n\n// Saída\nreturn [{\n  json: {\n    reply: result.reply,\n    session_update: {\n      employee_id: session.employee_id,\n      state: nextState,\n      context: newContext,\n      retries,\n      active,\n      last_message_id: message_id,\n      updated_at: nowISO()\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        -256
+      ],
+      "id": "9905a16d-c90e-4593-a794-31541e2b08fa",
+      "name": "State Engine"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://pljiqvdifpjbinxdadmz.supabase.co/rest/v1/wa_session?wa_id=eq.{{ $('Parser numero/mensagem').item.json.parsedPhoneNumber }}&active=eq.true",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('State Engine').item.json.session_update }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2240,
+        -256
+      ],
+      "id": "9ebd19ec-ec64-486a-b6ca-6fb43a2a55a2",
+      "name": "UPDATE State",
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://pljiqvdifpjbinxdadmz.supabase.co/rest/v1/log_json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"wa_id\": \"{{ $('Parser numero/mensagem').item.json.parsedPhoneNumber }}\",\n    \"log_type\": \"RECEIVED\",\n    \"content\": {\n      \"type\": \"{{ $('Parser numero/mensagem').item.json.type }}\",\n      \"text\": \"{{ $('Parser numero/mensagem').item.json.text }}\",\n      \"interactive_id\": \"{{ $('Parser numero/mensagem').item.json.interactive_id }}\"\n    }\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        688,
+        0
+      ],
+      "id": "bdba8e87-97ec-4fc8-9d37-85d78b071d0f",
+      "name": "Log RECEIVED",
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://pljiqvdifpjbinxdadmz.supabase.co/rest/v1/log_json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"wa_id\": \"{{ $('Parser numero/mensagem').item.json.parsedPhoneNumber }}\",\n    \"log_type\": \"SENT\",\n    \"content\": {{ JSON.stringify($('State Engine').item.json.reply) }}\n\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2448,
+        -256
+      ],
+      "id": "ab2c01b1-db08-4510-876b-ba0e014cf0e7",
+      "name": "Log SENT",
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://pljiqvdifpjbinxdadmz.supabase.co/rest/v1/log_json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"wa_id\": \"{{ $('Parser numero/mensagem').item.json.parsedPhoneNumber }}\",\n    \"log_type\": \"SENT\",\n    \"content\": {\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $('Parser numero/mensagem').item.json.parsedPhoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"Escolha o Tipo de Atendimento\"\n    },\n    \"body\": {\n      \"text\": \"Selecione uma das opções abaixo para continuar:\"\n    },\n    \"footer\": {\n      \"text\": \"Sistema de Atendimento\"\n    },\n    \"action\": {\n      \"button\": \"Selecionar\",\n      \"sections\": [\n        {\n          \"title\": \"Opções de Atendimento\",\n          \"rows\": [\n            {\n              \"id\": \"0\",\n              \"title\": \"Entrega Rota Normal\",\n              \"description\": \"Seguir com entrega padrão\"\n            },\n            {\n              \"id\": \"1\",\n              \"title\": \"Agendamento\",\n              \"description\": \"Agendar horário para entrega\"\n            },\n            {\n              \"id\": \"2\",\n              \"title\": \"Cancelar\",\n              \"description\": \"Cancelar atendimento.\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}\n\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2256,
+        144
+      ],
+      "id": "007c972d-9a8a-4291-8386-94be53a5f09d",
+      "name": "Log SENT1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "1f2MLqKps462P7gw",
+          "name": "Supabase Farrapos"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parser numero/mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser numero/mensagem": {
+      "main": [
+        [
+          {
+            "node": "Get last session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get last session": {
+      "main": [
+        [
+          {
+            "node": "Log RECEIVED",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Número registrado?": {
+      "main": [
+        [
+          {
+            "node": "Get vehicle",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Número não está registrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get employee wa_id": {
+      "main": [
+        [
+          {
+            "node": "Número registrado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First Session?": {
+      "main": [
+        [
+          {
+            "node": "Get employee wa_id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Atendimento em andamento?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get vehicle": {
+      "main": [
+        [
+          {
+            "node": "Start first session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atendimento em andamento?": {
+      "main": [
+        [
+          {
+            "node": "State Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Start new session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start menu": {
+      "main": [
+        [
+          {
+            "node": "Log SENT1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start first session": {
+      "main": [
+        [
+          {
+            "node": "Start menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start new session": {
+      "main": [
+        [
+          {
+            "node": "Start menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "State Engine": {
+      "main": [
+        [
+          {
+            "node": "POST Whatsapp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST Whatsapp": {
+      "main": [
+        [
+          {
+            "node": "UPDATE State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log RECEIVED": {
+      "main": [
+        [
+          {
+            "node": "First Session?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UPDATE State": {
+      "main": [
+        [
+          {
+            "node": "Log SENT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "18fe75dc-9860-4ba3-a931-8486fff41634",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "aa6df07db1b386814570ffd65bf5a1bc78881504b712a406d3a96a243fdeef75"
+  },
+  "id": "5iAt9hjMLQEFrqhY",
+  "tags": []
+}
