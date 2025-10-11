@@ -1,12 +1,12 @@
--- ============================================
--- SCHEMA PADRONIZADO
--- ============================================
+-- ==========================================
+-- BANCO DE DADOS: LOGÍSTICA / BOT FARRAPOS
+-- Estrutura reorganizada para leitura e manutenção
+-- ==========================================
 
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- =========================
+-- 1. EMPRESAS E UNIDADES
+-- =========================
 
--- =======================
--- EMPRESA (company)
--- =======================
 CREATE TABLE public.company (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -20,12 +20,9 @@ CREATE TABLE public.company (
   updated_at timestamptz DEFAULT now()
 );
 
--- =======================
--- UNIDADE (unit)
--- =======================
 CREATE TABLE public.unit (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id uuid REFERENCES public.company(id) ON DELETE CASCADE,
+  company_id uuid REFERENCES public.company(id),
   name text NOT NULL,
   address text,
   phone text,
@@ -35,13 +32,14 @@ CREATE TABLE public.unit (
   updated_at timestamptz DEFAULT now()
 );
 
--- =======================
--- FUNCIONÁRIO (employee)
--- =======================
+-- =========================
+-- 2. FUNCIONÁRIOS E VEÍCULOS
+-- =========================
+
 CREATE TABLE public.employee (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id uuid REFERENCES public.company(id) ON DELETE SET NULL,
-  unit_id uuid REFERENCES public.unit(id) ON DELETE SET NULL,
+  company_id uuid REFERENCES public.company(id),
+  unit_id uuid REFERENCES public.unit(id),
   name text NOT NULL,
   cpf text UNIQUE,
   employee_type smallint,
@@ -50,17 +48,12 @@ CREATE TABLE public.employee (
   updated_at timestamptz DEFAULT now()
 );
 
--- =======================
--- VEÍCULO (vehicle)
--- =======================
 CREATE TABLE public.vehicle (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id uuid REFERENCES public.company(id) ON DELETE SET NULL,
-  unit_id uuid REFERENCES public.unit(id) ON DELETE SET NULL,
-  employee_id uuid REFERENCES public.employee(id) ON DELETE SET NULL,
+  company_id uuid REFERENCES public.company(id),
+  unit_id uuid REFERENCES public.unit(id),
+  employee_id uuid REFERENCES public.employee(id),
   plate text NOT NULL UNIQUE,
-  company_relation smallint,
-  whatsapp_type smallint,
   model text,
   brand text,
   year integer,
@@ -68,15 +61,16 @@ CREATE TABLE public.vehicle (
   updated_at timestamptz DEFAULT now()
 );
 
--- =======================
--- MANIFESTO (manifest)
--- =======================
+-- =========================
+-- 3. MANIFESTOS E TAREFAS
+-- =========================
+
 CREATE TABLE public.manifest (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id uuid REFERENCES public.company(id) ON DELETE CASCADE,
-  unit_id uuid REFERENCES public.unit(id) ON DELETE SET NULL,
-  vehicle_id uuid REFERENCES public.vehicle(id) ON DELETE SET NULL,
-  employee_id uuid REFERENCES public.employee(id) ON DELETE SET NULL,
+  company_id uuid REFERENCES public.company(id),
+  unit_id uuid REFERENCES public.unit(id),
+  vehicle_id uuid REFERENCES public.vehicle(id),
+  employee_id uuid REFERENCES public.employee(id),
   erp_code text,
   manifest_date date,
   manifest_type smallint,
@@ -90,19 +84,16 @@ CREATE TABLE public.manifest (
   updated_at timestamptz DEFAULT now()
 );
 
--- =======================
--- TAREFA (task)
--- =======================
 CREATE TABLE public.task (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id uuid REFERENCES public.company(id) ON DELETE CASCADE,
-  unit_id uuid REFERENCES public.unit(id) ON DELETE SET NULL,
-  manifest_id uuid REFERENCES public.manifest(id) ON DELETE CASCADE,
-  employee_id uuid REFERENCES public.employee(id) ON DELETE SET NULL,
+  company_id uuid REFERENCES public.company(id),
+  unit_id uuid REFERENCES public.unit(id),
+  manifest_id uuid REFERENCES public.manifest(id),
+  employee_id uuid REFERENCES public.employee(id),
   erp_code text,
   task_type smallint,
   notes text,
-  erp_status smallint,
+  task_status smallint,
   processing_status smallint,
   priority smallint,
   address text,
@@ -111,19 +102,15 @@ CREATE TABLE public.task (
   window_start timestamptz,
   window_end timestamptz,
   order_expected integer,
-  order_completed integer,
   attempts integer DEFAULT 0,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
--- =======================
--- HISTÓRICO DE TAREFA (task_history)
--- =======================
 CREATE TABLE public.task_history (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id uuid REFERENCES public.task(id) ON DELETE CASCADE,
-  employee_id uuid REFERENCES public.employee(id) ON DELETE SET NULL,
+  task_id uuid REFERENCES public.task(id),
+  employee_id uuid REFERENCES public.employee(id),
   business_status smallint,
   technical_status smallint,
   notes text,
@@ -131,24 +118,15 @@ CREATE TABLE public.task_history (
   created_at timestamptz DEFAULT now()
 );
 
--- =======================
--- OCORRÊNCIA (incident)
--- =======================
-CREATE TABLE public.incident (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  erp_code text,
-  description text NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
+-- =========================
+-- 4. DOCUMENTOS E EVIDÊNCIAS
+-- =========================
 
--- =======================
--- NOTA FISCAL (invoice)
--- =======================
 CREATE TABLE public.invoice (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id uuid REFERENCES public.company(id) ON DELETE CASCADE,
-  manifest_id uuid REFERENCES public.manifest(id) ON DELETE CASCADE,
-  task_id uuid REFERENCES public.task(id) ON DELETE CASCADE,
+  company_id uuid REFERENCES public.company(id),
+  manifest_id uuid REFERENCES public.manifest(id),
+  task_id uuid REFERENCES public.task(id),
   number text,
   sender_id uuid,
   recipient_name text,
@@ -169,89 +147,45 @@ CREATE TABLE public.invoice (
   updated_at timestamptz DEFAULT now()
 );
 
--- =======================
--- IMAGEM (image)
--- =======================
+CREATE TABLE public.incident (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  erp_code text,
+  description text NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
 CREATE TABLE public.image (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id uuid REFERENCES public.task(id) ON DELETE CASCADE,
-  manifest_id uuid REFERENCES public.manifest(id) ON DELETE CASCADE,
-  invoice_id uuid REFERENCES public.invoice(id) ON DELETE CASCADE,
-  incident_id uuid REFERENCES public.incident(id) ON DELETE CASCADE,
+  task_id uuid REFERENCES public.task(id),
+  manifest_id uuid REFERENCES public.manifest(id),
+  invoice_id uuid REFERENCES public.invoice(id),
+  incident_id uuid REFERENCES public.incident(id),
   url text NOT NULL,
   description text,
   created_at timestamptz DEFAULT now()
 );
 
--- =======================
--- LOG JSON (log_json)
--- =======================
+-- =========================
+-- 5. LOGS E CONTROLE DE SESSÃO
+-- =========================
+
 CREATE TABLE public.log_json (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  whatsapp_id text,
+  wa_id text,
   content jsonb,
-  log_type smallint,
+  log_type text,
   created_at timestamptz DEFAULT now()
 );
 
--- =======================
--- WHATSAPP SESSION (wa_session)
--- =======================
 CREATE TABLE public.wa_session (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   wa_id text NOT NULL UNIQUE,
-  employee_id uuid REFERENCES public.employee(id) ON DELETE SET NULL,
+  employee_id uuid REFERENCES public.employee(id),
   state text NOT NULL DEFAULT 'start',
   context jsonb NOT NULL DEFAULT '{}'::jsonb,
   retries smallint DEFAULT 0,
   last_message_id text,
   active boolean DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+  updated_at timestamptz DEFAULT now(),
+  task_id uuid REFERENCES public.task(id)
 );
-
--- =======================
--- ÍNDICES
--- =======================
-CREATE INDEX idx_task_manifest ON public.task (manifest_id);
-CREATE INDEX idx_task_company ON public.task (company_id);
-CREATE INDEX idx_manifest_vehicle ON public.manifest (vehicle_id);
-CREATE INDEX idx_wa_session_wa_id ON public.wa_session (wa_id);
-CREATE INDEX idx_wa_session_employee ON public.wa_session (employee_id);
-CREATE INDEX idx_wa_session_context ON public.wa_session USING gin (context);
-
--- ============================================
--- RLS (ROW LEVEL SECURITY)
--- ============================================
-
--- Ativa RLS em todas as tabelas
-DO $$
-DECLARE
-  t RECORD;
-BEGIN
-  FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' LOOP
-    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', t.tablename);
-  END LOOP;
-END$$;
-
--- Libera acesso público (anônimo) às tabelas via API
-DO $$
-DECLARE
-  t RECORD;
-BEGIN
-  FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' LOOP
-    EXECUTE format('CREATE POLICY "public_select_%I" ON public.%I FOR SELECT USING (true);', t.tablename, t.tablename);
-    EXECUTE format('CREATE POLICY "public_insert_%I" ON public.%I FOR INSERT WITH CHECK (true);', t.tablename, t.tablename);
-    EXECUTE format('CREATE POLICY "public_update_%I" ON public.%I FOR UPDATE USING (true);', t.tablename, t.tablename);
-  END LOOP;
-END$$;
-
--- (Opcional) permitir DELETE apenas com service_role
-DO $$
-DECLARE
-  t RECORD;
-BEGIN
-  FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' LOOP
-    EXECUTE format('CREATE POLICY "admin_delete_%I" ON public.%I FOR DELETE USING (auth.role() = ''service_role'');', t.tablename, t.tablename);
-  END LOOP;
-END$$;
