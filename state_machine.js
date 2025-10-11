@@ -244,7 +244,7 @@ const stateMap = {
                     case '0':
                         return {
                             next: 'FINISHED',
-                            reply: buildText(`Status da tarefa ${currentTaskId} alterado para: "Em andamento"`),
+                            reply: [buildText(`Status da tarefa ${currentTaskId} alterado para: "Em andamento"`), buildGMapsButton(currentTask.latitude, currentTask.longitude)],
                             status: 1,
                             window_start: nowISO()
                         };
